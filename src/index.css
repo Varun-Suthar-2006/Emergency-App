@@ -23,9 +23,9 @@ body {
 }
 
 [data-theme="dark"] {
-  --bg: #121212;
+  --bg: #001c6b;
   --text: #ffffff;
   --card-bg: #1e1e1e;
-  --btn-bg: #bb86fc;
+  --btn-bg: #1800ee;
   --btn-text: #000;
 }

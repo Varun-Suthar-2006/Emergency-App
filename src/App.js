@@ -19,14 +19,12 @@ function App() {
   const [location, setLocation] = useState({ latitude: "-", longitude: "-", accuracy: "-" });
   const [battery, setBattery] = useState({ level: "-", charging: "-" });
 
-  // ========== Effects ==========
   useEffect(() => {
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) { setCurrentUser(JSON.parse(savedUser)); setPage("dashboard"); }
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) setTheme(savedTheme);
 
-    // Location
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition((pos) => {
         setLocation({
@@ -37,7 +35,6 @@ function App() {
       });
     }
 
-    // Battery
     if (navigator.getBattery) {
       navigator.getBattery().then(bat => {
         const updateBattery = () => setBattery({
@@ -50,7 +47,6 @@ function App() {
       });
     }
 
-    // Fall Detection
     const handleMotion = (event) => {
       const acc = event.accelerationIncludingGravity;
       const total = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
@@ -61,6 +57,7 @@ function App() {
     };
     window.addEventListener("devicemotion", handleMotion);
     return () => window.removeEventListener("devicemotion", handleMotion);
+
   }, [currentUser]);
 
   useEffect(() => { 
@@ -79,7 +76,6 @@ function App() {
     localStorage.setItem("theme", theme); 
   }, [theme]);
 
-  // ========== Actions ==========
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const login = (username, password) => {
@@ -106,7 +102,6 @@ function App() {
     return "Good Evening";
   };
 
-  // ========== Routing ==========
   if (page === "login") return <Login onLogin={login} onSwitch={() => setPage("register")} />;
   if (page === "register") return <Register onRegister={register} onSwitch={() => setPage("login")} />;
   if (page === "dashboard")
@@ -115,7 +110,7 @@ function App() {
         user={currentUser}
         greeting={greeting()}
         onLogout={() => {
-          localStorage.removeItem("currentUser");  // ✅ FIXED logout bug
+          localStorage.removeItem("currentUser");
           setCurrentUser(null);
           setPage("login");
         }}
@@ -260,7 +255,17 @@ Contact Number: ${num}`;
               </div>
             </section>
 
-            <div className="panic-btn" onMouseDown={() => window.location.href=`tel:${user.number}`} onTouchStart={() => window.location.href=`tel:${user.number}`}>
+            <div 
+              className="panic-btn"
+              onMouseDown={() => {
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+                window.location.href=`tel:${user.number}`;
+              }}
+              onTouchStart={() => {
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+                window.location.href=`tel:${user.number}`;
+              }}
+            >
               🚨 HOLD to PANIC
             </div>
 
@@ -291,13 +296,7 @@ Contact Number: ${num}`;
 
         {tab === "contacts" && (
           <section className="card">
-            <input 
-              type="text" 
-              placeholder="Search contacts..." 
-              value={contactSearch} 
-              onChange={(e) => setContactSearch(e.target.value)} 
-              style={{ width: "100%", padding: "0.5rem", marginBottom: "1rem" }} 
-            />
+            <input type="text" placeholder="Search contacts..." value={contactSearch} onChange={(e) => setContactSearch(e.target.value)} style={{ width: "100%", padding: "0.5rem", marginBottom: "1rem" }} />
             <ul className="contacts-list">
               {filteredContacts.map((c, i) => (
                 <li key={i} className="contact-item">
