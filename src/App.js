@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import { FaHome, FaAddressBook } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+
+/* ---------------- SPLASH ---------------- */
+function SplashScreen() {
+  return (
+    <motion.div 
+      className="splash-screen"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <h1 className="splash-title">Welcome to the Shakti App</h1>
+    </motion.div>
+  );
+}
 
 function App() {
-  const [page, setPage] = useState("login");
+  const [page, setPage] = useState("splash");
   const [currentUser, setCurrentUser] = useState(null);
   const [theme, setTheme] = useState("light");
   const [dashboardTab, setDashboardTab] = useState("home");
@@ -19,9 +34,11 @@ function App() {
   const [location, setLocation] = useState({ latitude: "-", longitude: "-", accuracy: "-" });
   const [battery, setBattery] = useState({ level: "-", charging: "-" });
 
+  /* ---------------- INITIAL LOAD ---------------- */
   useEffect(() => {
     const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) { setCurrentUser(JSON.parse(savedUser)); setPage("dashboard"); }
+    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) setTheme(savedTheme);
 
@@ -36,53 +53,55 @@ function App() {
     }
 
     if (navigator.getBattery) {
-      navigator.getBattery().then(bat => {
+      navigator.getBattery().then((bat) => {
         const updateBattery = () => setBattery({
           level: Math.round(bat.level * 100) + "%",
-          charging: bat.charging ? "Charging" : "Not Charging"
+          charging: bat.charging ? "Charging" : "Not Charging",
         });
         updateBattery();
-        bat.addEventListener('levelchange', updateBattery);
-        bat.addEventListener('chargingchange', updateBattery);
+        bat.addEventListener("levelchange", updateBattery);
+        bat.addEventListener("chargingchange", updateBattery);
       });
     }
 
     const handleMotion = (event) => {
       const acc = event.accelerationIncludingGravity;
       const total = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-      if (total > 30 && currentUser) { 
+      if (total > 30 && currentUser) {
         alert("Fall detected! Calling emergency number...");
         window.location.href = `tel:${currentUser.number}`;
       }
     };
     window.addEventListener("devicemotion", handleMotion);
     return () => window.removeEventListener("devicemotion", handleMotion);
-
   }, [currentUser]);
 
-  useEffect(() => { 
-    if (currentUser) 
-      localStorage.setItem("currentUser", JSON.stringify(currentUser)); 
-    else 
-      localStorage.removeItem("currentUser"); 
+  useEffect(() => {
+    if (currentUser) localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    else localStorage.removeItem("currentUser");
   }, [currentUser]);
 
-  useEffect(() => { 
-    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts)); 
+  useEffect(() => {
+    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts));
   }, [emergencyContacts]);
 
-  useEffect(() => { 
-    document.body.setAttribute("data-theme", theme); 
-    localStorage.setItem("theme", theme); 
+  useEffect(() => {
+    document.body.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPage(currentUser ? "dashboard" : "login"), 2500);
+    return () => clearTimeout(timer);
+  }, [currentUser]);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const login = (username, password) => {
     let users = JSON.parse(localStorage.getItem("users") || "{}");
-    if (users[username] && users[username].password === password) { 
-      setCurrentUser(users[username]); 
-      setPage("dashboard"); 
+    if (users[username] && users[username].password === password) {
+      setCurrentUser(users[username]);
+      setPage("dashboard");
     } else alert("Invalid Login. Please Register first.");
   };
 
@@ -102,18 +121,17 @@ function App() {
     return "Good Evening";
   };
 
-  if (page === "login") return <Login onLogin={login} onSwitch={() => setPage("register")} />;
-  if (page === "register") return <Register onRegister={register} onSwitch={() => setPage("login")} />;
-  if (page === "dashboard")
-    return (
-      <Dashboard
+  /* ---------------- RENDER ---------------- */
+  return (
+    <AnimatePresence exitBeforeEnter>
+      {page === "splash" && <SplashScreen key="splash" />}
+      {page === "login" && <Login key="login" onLogin={login} onSwitch={() => setPage("register")} />}
+      {page === "register" && <Register key="register" onRegister={register} onSwitch={() => setPage("login")} />}
+      {page === "dashboard" && <Dashboard
+        key="dashboard"
         user={currentUser}
         greeting={greeting()}
-        onLogout={() => {
-          localStorage.removeItem("currentUser");
-          setCurrentUser(null);
-          setPage("login");
-        }}
+        onLogout={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}
         toggleTheme={toggleTheme}
         tab={dashboardTab}
         setTab={setDashboardTab}
@@ -123,10 +141,9 @@ function App() {
         setContactSearch={setContactSearch}
         location={location}
         battery={battery}
-      />
-    );
-
-  return null;
+      />}
+    </AnimatePresence>
+  );
 }
 
 /* ---------------- LOGIN ---------------- */
@@ -134,7 +151,12 @@ function Login({ onLogin, onSwitch }) {
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
   return (
-    <div className="login-screen">
+    <motion.div 
+      className="login-screen"
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 50 }}
+    >
       <div className="login-card">
         <h2>Login</h2>
         <input placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -142,7 +164,7 @@ function Login({ onLogin, onSwitch }) {
         <div className="btn" onClick={() => onLogin(name, pass)}>Login</div>
         <p>Don't have an account? <span className="btn" onClick={onSwitch}>Register</span></p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -152,19 +174,29 @@ function Register({ onRegister, onSwitch }) {
   const [email, setEmail] = useState("");
   const [number, setNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState("male");
 
   return (
-    <div className="login-screen">
+    <motion.div 
+      className="login-screen"
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+    >
       <div className="login-card">
         <h2>Register</h2>
         <input placeholder="Enter your name" value={username} onChange={(e) => setUsername(e.target.value)} />
         <input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input type="tel" placeholder="Emergency number" value={number} onChange={(e) => setNumber(e.target.value)} />
         <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <div className="btn" onClick={() => onRegister({ username, email, number, password })}>Register</div>
+        <select value={gender} onChange={(e) => setGender(e.target.value)}>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+        <div className="btn" onClick={() => onRegister({ username, email, number, password, gender })}>Register</div>
         <p>Already have an account? <span className="btn" onClick={onSwitch}>Login</span></p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -217,11 +249,15 @@ Contact Number: ${num}`;
     window.location.href = `sms:?body=${encodeURIComponent(message)}`;
   };
 
+  const avatar = user.gender === "male"
+    ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIf4R5qPKHPNMyAqV-FjS_OTBB8pfUV29Phg&s"
+    : "https://cdn-icons-png.freepik.com/512/6833/6833605.png";
+
   return (
     <div className="app">
       <header>
         <div className="profile">
-          <img src="https://img.freepik.com/premium-vector/avatar-profile-icon-flat-style-male-user-profile-vector-illustration-isolated-background-man-profile-sign-business-concept_157943-38764.jpg" alt="profile" />
+          <img src={avatar} alt="profile" />
           <div className="greeting-container">
             <h1>Emergency Dashboard</h1>
             <p className="greeting">{greeting}, {user.username}</p>
@@ -257,14 +293,8 @@ Contact Number: ${num}`;
 
             <div 
               className="panic-btn"
-              onMouseDown={() => {
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
-                window.location.href=`tel:${user.number}`;
-              }}
-              onTouchStart={() => {
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
-                window.location.href=`tel:${user.number}`;
-              }}
+              onMouseDown={() => { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]); window.location.href=`tel:${user.number}`; }}
+              onTouchStart={() => { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]); window.location.href=`tel:${user.number}`; }}
             >
               🚨 HOLD to PANIC
             </div>
@@ -302,10 +332,7 @@ Contact Number: ${num}`;
                 <li key={i} className="contact-item">
                   <span>{c.name}</span> - <span>{c.number}</span>
                   <div className="contact-actions">
-                    <button className="call-sms-btn" onClick={() => {
-                      window.location.href = `tel:${c.number}`;
-                      setTimeout(() => { smsEmergency(c.number); }, 500);
-                    }}>🚨 Call + SMS</button>
+                    <button className="call-sms-btn" onClick={() => { window.location.href = `tel:${c.number}`; setTimeout(() => { smsEmergency(c.number); }, 500); }}>🚨 Call + SMS</button>
                     <button className="edit-btn" onClick={() => editContact(i)}>✏️</button>
                     <button className="delete-btn" onClick={() => deleteContact(i)}>🗑️</button>
                   </div>
@@ -319,10 +346,11 @@ Contact Number: ${num}`;
         {tab === "profile" && (
           <section className="card">
             <h2>Profile</h2>
-            <img src="https://img.freepik.com/premium-vector/avatar-profile-icon-flat-style-male-user-profile-vector-illustration-isolated-background-man-profile-sign-business-concept_157943-38764.jpg" alt="logo" style={{ width: "80px", borderRadius: "50%", marginBottom: "1rem" }} />
+            <img src={avatar} alt="logo" style={{ width: "80px", borderRadius: "50%", marginBottom: "1rem" }} />
             <p><strong>Name:</strong> {user.username}</p>
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Emergency Number:</strong> {user.number}</p>
+            <p><strong>Gender:</strong> {user.gender}</p>
             <div className="logout-btn" onClick={onLogout}>Logout</div>
           </section>
         )}
@@ -331,7 +359,7 @@ Contact Number: ${num}`;
       <nav className="bottom-nav">
         <button className={tab === "home" ? "active" : ""} onClick={() => setTab("home")}><FaHome size={24} /><span className="nav-label">Home</span></button>
         <button className={tab === "contacts" ? "active" : ""} onClick={() => setTab("contacts")}><FaAddressBook size={24} /><span className="nav-label">Contacts</span></button>
-        <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}><img src="https://img.freepik.com/premium-vector/avatar-profile-icon-flat-style-male-user-profile-vector-illustration-isolated-background-man-profile-sign-business-concept_157943-38764.jpg" alt="logo" style={{ width: "24px", height: "24px", borderRadius: "50%" }} /><span className="nav-label">Profile</span></button>
+        <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}><img src={avatar} alt="logo" style={{ width: "24px", height: "24px", borderRadius: "50%" }} /><span className="nav-label">Profile</span></button>
       </nav>
     </div>
   );
