@@ -1,47 +1,56 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import { FaHome, FaAddressBook } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
-
-/* ---------------- SPLASH ---------------- */
-function SplashScreen() {
-  return (
-    <motion.div 
-      className="splash-screen"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <h1 className="splash-title">Welcome to the Shakti App</h1>
-    </motion.div>
-  );
-}
 
 function App() {
+  const defaultContacts = [
+    { name: "National Emergency", number: "112" },
+    { name: "Tourist Helpline", number: "1363" },
+    { name: "Police", number: "100" },
+    { name: "Fire", number: "101" },
+    { name: "Ambulance", number: "102" },
+    { name: "Road Accident", number: "1073" },
+    { name: "Disaster Management", number: "108" },
+    { name: "Air Accident", number: "1071" },
+    { name: "Women in Distress", number: "1091" },
+    { name: "Medical Helpline", number: "104" },
+    { name: "Indian Railway Security", number: "1322" },
+    { name: "Earthquake Helpline", number: "1092" },
+  ];
+
   const [page, setPage] = useState("splash");
   const [currentUser, setCurrentUser] = useState(null);
   const [theme, setTheme] = useState("light");
   const [dashboardTab, setDashboardTab] = useState("home");
-  const [emergencyContacts, setEmergencyContacts] = useState(() => {
-    return JSON.parse(localStorage.getItem("emergencyContacts")) || [
-      { name: "Police", number: "100" },
-      { name: "Ambulance", number: "102" },
-      { name: "Fire", number: "101" },
-      { name: "Women Safety", number: "1091" },
-    ];
-  });
   const [contactSearch, setContactSearch] = useState("");
   const [location, setLocation] = useState({ latitude: "-", longitude: "-", accuracy: "-" });
   const [battery, setBattery] = useState({ level: "-", charging: "-" });
 
-  /* ---------------- INITIAL LOAD ---------------- */
+  // Merge default + saved contacts
+  const [emergencyContacts, setEmergencyContacts] = useState(() => {
+    const saved = JSON.parse(localStorage.getItem("emergencyContacts")) || [];
+    const merged = [...defaultContacts, ...saved];
+    const unique = merged.filter(
+      (c, index, self) => index === self.findIndex(x => x.number === c.number)
+    );
+    return unique;
+  });
+
+  // Splash -> Login/Register
   useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+    const timer = setTimeout(() => {
+      const savedUser = localStorage.getItem("currentUser");
+      if (savedUser) { setCurrentUser(JSON.parse(savedUser)); setPage("dashboard"); }
+      else setPage("login");
 
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) setTheme(savedTheme);
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) setTheme(savedTheme);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
+  // Geolocation, battery, fall detection
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition((pos) => {
         setLocation({
@@ -53,14 +62,14 @@ function App() {
     }
 
     if (navigator.getBattery) {
-      navigator.getBattery().then((bat) => {
+      navigator.getBattery().then(bat => {
         const updateBattery = () => setBattery({
           level: Math.round(bat.level * 100) + "%",
-          charging: bat.charging ? "Charging" : "Not Charging",
+          charging: bat.charging ? "Charging" : "Not Charging"
         });
         updateBattery();
-        bat.addEventListener("levelchange", updateBattery);
-        bat.addEventListener("chargingchange", updateBattery);
+        bat.addEventListener('levelchange', updateBattery);
+        bat.addEventListener('chargingchange', updateBattery);
       });
     }
 
@@ -76,32 +85,30 @@ function App() {
     return () => window.removeEventListener("devicemotion", handleMotion);
   }, [currentUser]);
 
-  useEffect(() => {
-    if (currentUser) localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    else localStorage.removeItem("currentUser");
+  // Save currentUser
+  useEffect(() => { 
+    if (currentUser) localStorage.setItem("currentUser", JSON.stringify(currentUser)); 
+    else localStorage.removeItem("currentUser"); 
   }, [currentUser]);
 
-  useEffect(() => {
-    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts));
+  // Save emergencyContacts
+  useEffect(() => { 
+    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts)); 
   }, [emergencyContacts]);
 
-  useEffect(() => {
-    document.body.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
+  // Save theme
+  useEffect(() => { 
+    document.body.setAttribute("data-theme", theme); 
+    localStorage.setItem("theme", theme); 
   }, [theme]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setPage(currentUser ? "dashboard" : "login"), 2500);
-    return () => clearTimeout(timer);
-  }, [currentUser]);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const login = (username, password) => {
     let users = JSON.parse(localStorage.getItem("users") || "{}");
-    if (users[username] && users[username].password === password) {
-      setCurrentUser(users[username]);
-      setPage("dashboard");
+    if (users[username] && users[username].password === password) { 
+      setCurrentUser(users[username]); 
+      setPage("dashboard"); 
     } else alert("Invalid Login. Please Register first.");
   };
 
@@ -121,14 +128,12 @@ function App() {
     return "Good Evening";
   };
 
-  /* ---------------- RENDER ---------------- */
-  return (
-    <AnimatePresence exitBeforeEnter>
-      {page === "splash" && <SplashScreen key="splash" />}
-      {page === "login" && <Login key="login" onLogin={login} onSwitch={() => setPage("register")} />}
-      {page === "register" && <Register key="register" onRegister={register} onSwitch={() => setPage("login")} />}
-      {page === "dashboard" && <Dashboard
-        key="dashboard"
+  if (page === "splash") return <Splash />;
+  if (page === "login") return <Login onLogin={login} onSwitch={() => setPage("register")} />;
+  if (page === "register") return <Register onRegister={register} onSwitch={() => setPage("login")} />;
+  if (page === "dashboard")
+    return (
+      <Dashboard
         user={currentUser}
         greeting={greeting()}
         onLogout={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}
@@ -141,8 +146,18 @@ function App() {
         setContactSearch={setContactSearch}
         location={location}
         battery={battery}
-      />}
-    </AnimatePresence>
+      />
+    );
+
+  return null;
+}
+
+/* ---------------- SPLASH ---------------- */
+function Splash() {
+  return (
+    <div className="splash-screen">
+      <h1 className="splash-title">Welcome to Shakti App</h1>
+    </div>
   );
 }
 
@@ -151,12 +166,7 @@ function Login({ onLogin, onSwitch }) {
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
   return (
-    <motion.div 
-      className="login-screen"
-      initial={{ opacity: 0, x: -50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 50 }}
-    >
+    <div className="login-screen">
       <div className="login-card">
         <h2>Login</h2>
         <input placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -164,7 +174,7 @@ function Login({ onLogin, onSwitch }) {
         <div className="btn" onClick={() => onLogin(name, pass)}>Login</div>
         <p>Don't have an account? <span className="btn" onClick={onSwitch}>Register</span></p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -173,30 +183,25 @@ function Register({ onRegister, onSwitch }) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [number, setNumber] = useState("");
-  const [password, setPassword] = useState("");
   const [gender, setGender] = useState("male");
+  const [password, setPassword] = useState("");
 
   return (
-    <motion.div 
-      className="login-screen"
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-    >
+    <div className="login-screen">
       <div className="login-card">
         <h2>Register</h2>
         <input placeholder="Enter your name" value={username} onChange={(e) => setUsername(e.target.value)} />
         <input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input type="tel" placeholder="Emergency number" value={number} onChange={(e) => setNumber(e.target.value)} />
-        <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <select value={gender} onChange={(e) => setGender(e.target.value)}>
           <option value="male">Male</option>
           <option value="female">Female</option>
         </select>
-        <div className="btn" onClick={() => onRegister({ username, email, number, password, gender })}>Register</div>
+        <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <div className="btn" onClick={() => onRegister({ username, email, number, gender, password })}>Register</div>
         <p>Already have an account? <span className="btn" onClick={onSwitch}>Login</span></p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -206,6 +211,10 @@ function Dashboard({
   emergencyContacts, setEmergencyContacts, contactSearch, setContactSearch,
   location, battery
 }) {
+  const avatar = user.gender === "male"
+    ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIf4R5qPKHPNMyAqV-FjS_OTBB8pfUV29Phg&s"
+    : "https://cdn-icons-png.freepik.com/512/6833/6833605.png";
+
   const filteredContacts = emergencyContacts.filter(c =>
     c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
     c.number.includes(contactSearch)
@@ -236,10 +245,7 @@ function Dashboard({
   };
 
   const smsEmergency = (num) => {
-    const msg = `🚨 Emergency alert! Please help.
-Location: Latitude ${location.latitude}, Longitude ${location.longitude}
-Google Maps: https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}
-Contact Number: ${num}`;
+    const msg = `🚨 Emergency alert! Please help.\nLocation: Latitude ${location.latitude}, Longitude ${location.longitude}\nGoogle Maps: https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}\nContact Number: ${num}`;
     window.location.href = `sms:${num}?body=${encodeURIComponent(msg)}`;
   };
 
@@ -248,10 +254,6 @@ Contact Number: ${num}`;
     const message = `🚨 Emergency Alert!\n\nPlease help me.\nMy Location: ${mapsLink}`;
     window.location.href = `sms:?body=${encodeURIComponent(message)}`;
   };
-
-  const avatar = user.gender === "male"
-    ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIf4R5qPKHPNMyAqV-FjS_OTBB8pfUV29Phg&s"
-    : "https://cdn-icons-png.freepik.com/512/6833/6833605.png";
 
   return (
     <div className="app">
@@ -325,21 +327,36 @@ Contact Number: ${num}`;
         )}
 
         {tab === "contacts" && (
-          <section className="card">
-            <input type="text" placeholder="Search contacts..." value={contactSearch} onChange={(e) => setContactSearch(e.target.value)} style={{ width: "100%", padding: "0.5rem", marginBottom: "1rem" }} />
-            <ul className="contacts-list">
+          <section className="card contacts-section">
+            <h2>Emergency Contacts</h2>
+            <input
+              type="text"
+              className="search-bar"
+              placeholder="Search contacts..."
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+            />
+
+            <div className="contacts-list-modern">
               {filteredContacts.map((c, i) => (
-                <li key={i} className="contact-item">
-                  <span>{c.name}</span> - <span>{c.number}</span>
-                  <div className="contact-actions">
-                    <button className="call-sms-btn" onClick={() => { window.location.href = `tel:${c.number}`; setTimeout(() => { smsEmergency(c.number); }, 500); }}>🚨 Call + SMS</button>
-                    <button className="edit-btn" onClick={() => editContact(i)}>✏️</button>
-                    <button className="delete-btn" onClick={() => deleteContact(i)}>🗑️</button>
+                <div key={i} className="contact-card">
+                  <div className="contact-avatar">
+                    <span>{c.name.charAt(0).toUpperCase()}</span>
                   </div>
-                </li>
+                  <div className="contact-details">
+                    <p className="contact-name">{c.name}</p>
+                    <p className="contact-number">{c.number}</p>
+                  </div>
+                  <div className="contact-actions">
+                    <button className="action-btn call" onClick={() => { window.location.href = `tel:${c.number}`; setTimeout(() => { smsEmergency(c.number); }, 500); }}>📞</button>
+                    <button className="action-btn edit" onClick={() => editContact(i)}>✏️</button>
+                    <button className="action-btn delete" onClick={() => deleteContact(i)}>🗑️</button>
+                  </div>
+                </div>
               ))}
-            </ul>
-            <button className="add-contact-btn" onClick={addContact}>+ Add Contact</button>
+            </div>
+
+            <button className="fab-add-contact" onClick={addContact}>＋</button>
           </section>
         )}
 
@@ -350,7 +367,6 @@ Contact Number: ${num}`;
             <p><strong>Name:</strong> {user.username}</p>
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Emergency Number:</strong> {user.number}</p>
-            <p><strong>Gender:</strong> {user.gender}</p>
             <div className="logout-btn" onClick={onLogout}>Logout</div>
           </section>
         )}
